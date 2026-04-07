@@ -27,6 +27,7 @@ dependencies = [
 
 [project.scripts]
 evaluate = "evaluation.evaluate:main"
+evaluate_many = "evaluation.evaluate_many:main"
 interactive = "interactive:main"
 
 [tool.ty.environment]

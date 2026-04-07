@@ -14,18 +14,26 @@ from rich.prompt import Prompt
 from framework.agent import Agent, Tool
 from framework.llm import OpenRouterConfig
 from framework.stream_printer import StreamPrinter
+from tools.explore_schema import EXPLORE_SCHEMA
+from tools.read_guide import READ_GUIDE
+from tools.run_query import RUN_QUERY
 from tools.submit_answer import SUBMIT_ANSWER
 
 
-def create_tools() -> dict[str, Tool]:
+def create_tools(api_key: str) -> dict[str, Tool]:
     """Create the tools for the agent.
+
+    Args:
+        api_key: OpenRouter API key.
 
     Returns:
         Dictionary mapping tool names to Tool instances.
     """
     return {
         SUBMIT_ANSWER.name: SUBMIT_ANSWER,
-        # You can add your own tools here to test!
+        EXPLORE_SCHEMA.name: EXPLORE_SCHEMA,
+        READ_GUIDE.name: READ_GUIDE,
+        RUN_QUERY.name: RUN_QUERY,
     }
 
 
@@ -42,7 +50,7 @@ def create_agent(api_key: str) -> Agent:
         api_key=api_key,
         # Defaults to gpt-oss-120b on Cerebras
     )
-    tools = create_tools()
+    tools = create_tools(api_key=api_key)
     return Agent(config=config, tools=tools)
 
 

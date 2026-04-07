@@ -135,9 +135,13 @@ class OpenRouterClient:
             "model": self.config.model,
             "messages": messages,
             "max_tokens": self.config.max_tokens,
-            "temperature": self.config.temperature,
             "stream": stream,
         }
+
+        # Reasoning models (e.g., o-series, GPT-5.x) reject non-default temperature.
+        # Only include temperature when reasoning is not enabled.
+        if not self.config.reasoning:
+            body["temperature"] = self.config.temperature
 
         # Request usage data in streaming mode (OpenAI-compatible extension)
         if stream:
@@ -154,6 +158,35 @@ class OpenRouterClient:
             body["reasoning"] = self.config.reasoning
 
         return body
+
+    def chat_completion(
+        self,
+        messages: list[dict[str, Any]],
+    ) -> str:
+        """Make a non-streaming chat completion request.
+
+        Returns the full response text content.
+        """
+        body = self._build_request_body(messages, tools=None, stream=False)
+
+        retryer = Retrying(
+            retry=retry_if_exception(_is_retryable_error),
+            stop=stop_after_attempt(5),
+            wait=wait_exponential(multiplier=1, min=1, max=60),
+            reraise=True,
+        )
+
+        for attempt in retryer:
+            with attempt:
+                response = self._client.post(OPENROUTER_API_URL, json=body)
+                response.raise_for_status()
+                data = response.json()
+                choices = data.get("choices", [])
+                if not choices:
+                    return ""
+                return choices[0].get("message", {}).get("content", "") or ""
+
+        return ""
 
     def chat_completion_stream(
         self,
@@ -249,8 +282,8 @@ class OpenRouterClient:
                                                 "arguments"
                                             ] += func["arguments"]
 
-                            # When finish_reason is set, include accumulated tool calls
-                            if finish_reason == "tool_calls" and tool_calls_buffer:
+                            # Emit accumulated tool calls when stream signals completion
+                            if finish_reason and tool_calls_buffer:
                                 chunk.tool_calls = [
                                     tool_calls_buffer[i]
                                     for i in sorted(tool_calls_buffer.keys())

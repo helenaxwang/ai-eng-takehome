@@ -49,6 +49,9 @@ from evaluation.compare import loosely_compare_dataframes
 from framework.agent import ANSWER_SUBMITTED_PREFIX, Agent, AgentEvent, EventType, Tool
 from framework.database import execute_query
 from framework.llm import OpenRouterConfig, TokenUsage
+from tools.explore_schema import EXPLORE_SCHEMA
+from tools.read_guide import READ_GUIDE
+from tools.run_query import RUN_QUERY
 from tools.submit_answer import SUBMIT_ANSWER
 
 # =============================================================================
@@ -134,20 +137,25 @@ def save_trace(
 # =============================================================================
 
 
-def create_tools() -> dict[str, Tool]:
+def create_tools(api_key: str = "") -> dict[str, Tool]:
     """Create the tools for the agent.
 
     Modify this function to add or remove tools from the agent.
     The agent will have access to all tools returned by this function.
 
+    Args:
+        api_key: OpenRouter API key.
+
     Returns:
         A dictionary mapping tool names to Tool objects.
     """
-    return {
+    tools: dict[str, Tool] = {
         SUBMIT_ANSWER.name: SUBMIT_ANSWER,
-        # Add your custom tools here:
-        # MY_TOOL.name: MY_TOOL,
+        EXPLORE_SCHEMA.name: EXPLORE_SCHEMA,
+        READ_GUIDE.name: READ_GUIDE,
+        RUN_QUERY.name: RUN_QUERY,
     }
+    return tools
 
 
 # =============================================================================
@@ -973,7 +981,7 @@ def main() -> None:
     console.print("[dim]Loading tools and preparing agent...[/dim]\n")
 
     # Get tools from the configurable function
-    tools = create_tools()
+    tools = create_tools(api_key=args.api_key)
     console.print(f"[dim]Agent tools: {', '.join(tools.keys())}[/dim]")
     if args.concurrency > 1:
         console.print(f"[dim]Concurrency: {args.concurrency}[/dim]")
